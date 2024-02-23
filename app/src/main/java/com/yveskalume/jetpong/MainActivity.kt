@@ -8,9 +8,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,12 +27,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.yveskalume.jetpong.ui.theme.JetPongTheme
@@ -48,29 +52,59 @@ class MainActivity : ComponentActivity() {
                         mutableStateOf(false)
                     }
 
+                    var showPlayInstruction by remember {
+                        mutableStateOf(false)
+                    }
+
                     var userHaveWon by remember {
                         mutableStateOf(false)
                     }
                     Box(modifier = Modifier.fillMaxSize()) {
-                        AnimatedVisibility(
-                            visible = isGameFinished,
-                            modifier = Modifier.align(Alignment.Center)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight(),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(
-                                text = if (userHaveWon) "You won" else "You Loose",
-                                textAlign = TextAlign.Center,
-                                fontSize = 32.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (userHaveWon) Color.Green else Color.Red
-                            )
+                            Spacer(modifier = Modifier.height(32.dp))
+                            AnimatedVisibility(
+                                visible = isGameFinished,
+                            ) {
+                                Text(
+                                    text = if (userHaveWon) "You won" else "You Loose",
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (userHaveWon) Color.Green else Color.Red
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            AnimatedVisibility(
+                                visible = showPlayInstruction,
+                            ) {
+                                Text(
+                                    text = "Click on the ball to start playing",
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 28.sp,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
                         }
                         GameScreen(
                             onGameFinish = { userWon ->
                                 userHaveWon = userWon
                                 isGameFinished = true
+                                showPlayInstruction = true
                             },
-                            onRestartGame = {
+                            onStartPlaying = {
                                 isGameFinished = false
+                                showPlayInstruction = false
+                            },
+                            onInitializeGame = {
+                                showPlayInstruction = true
                             }
                         )
                     }
@@ -83,7 +117,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun GameScreen(
     onGameFinish: (Boolean) -> Unit,
-    onRestartGame: () -> Unit
+    onStartPlaying: () -> Unit,
+    onInitializeGame: () -> Unit
 ) {
 
     BoxWithConstraints(
@@ -107,8 +142,8 @@ fun GameScreen(
             when (game.gameState.value) {
                 GameState.UserWon -> onGameFinish(true)
                 GameState.ComputerWon -> onGameFinish(false)
-                GameState.Initial -> {}
-                GameState.Playing -> onRestartGame()
+                GameState.Initial -> onInitializeGame()
+                GameState.Playing -> onStartPlaying()
             }
         }
 
@@ -153,7 +188,8 @@ fun GreetingPreview() {
     JetPongTheme {
         GameScreen(
             onGameFinish = {},
-            onRestartGame = {}
+            onStartPlaying = {},
+            onInitializeGame = {}
         )
     }
 }
