@@ -8,18 +8,25 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.unit.dp
 
 
+enum class GameState {
+    Inital, Playing, UserWon, ComputerWon
+}
+
 @Composable
-fun rememberGame(computerPlayer: Player, humanPlayer: Player, config: Config) =
+fun rememberGame(config: Config) =
     remember(config.screenHeight, config.screenWidth) {
-        mutableStateOf(Game(computerPlayer, humanPlayer, config))
+        mutableStateOf(Game(config = config))
     }
 
-class Game(val computerPlayer: Player, val humanPlayer: Player, private val config: Config) {
+class Game(
+    val computerPlayer: Player = Player(),
+    val humanPlayer: Player = Player(),
+    private val config: Config
+) {
 
     val ball = Ball(config.density)
 
-    val isPlaying: MutableState<Boolean> = mutableStateOf(false)
-    val humanWin: MutableState<Boolean> = mutableStateOf(false)
+    val gameState: MutableState<GameState> = mutableStateOf(GameState.Inital)
 
     init {
         with(config) {
@@ -36,11 +43,11 @@ class Game(val computerPlayer: Player, val humanPlayer: Player, private val conf
 
 
     suspend fun play() {
-        isPlaying.value = true
+        gameState.value = GameState.Playing
         val computerMachineSpeedAndDirection = ball.velocityX / 2f
         var lastFrameMillis = withFrameMillis { it }
 
-        while (isPlaying.value) {
+        while (gameState.value == GameState.Playing) {
             withFrameMillis {
                 val deltaTime = it - lastFrameMillis
 
@@ -82,13 +89,11 @@ class Game(val computerPlayer: Player, val humanPlayer: Player, private val conf
                         ball.velocityX
                     )
                 } else if (ball.y.value >= config.screenHeight - config.ballSize && ball.actualYVelocity > 0) {
-                    humanWin.value = false
-                    isPlaying.value = false
-                    endGame()
+                    gameState.value = GameState.ComputerWon
+                    resetItemPositions()
                 } else if (ball.y.value <= 0.dp && ball.actualYVelocity < 0) {
-                    humanWin.value = true
-                    isPlaying.value = false
-                    endGame()
+                    gameState.value = GameState.UserWon
+                    resetItemPositions()
                 }
 
                 if (ball.x.value >= config.screenWidth - config.ballSize && ball.actualXVelocity > 0 || ball.x.value <= 0.dp && ball.actualXVelocity < 0) {
@@ -100,7 +105,16 @@ class Game(val computerPlayer: Player, val humanPlayer: Player, private val conf
         }
     }
 
-    fun endGame() {
-        isPlaying.value = false
+    private fun resetItemPositions() {
+        with(config) {
+            ball.x.value = (screenWidth / 2) - (ballSize / 2)
+            ball.y.value = (screenHeight / 2) - (ballSize / 2)
+
+            computerPlayer.x.value = (screenWidth / 2) - (playerWidth / 2)
+            computerPlayer.y.value = 0.dp
+
+            humanPlayer.x.value = (screenWidth / 2) - (playerWidth / 2)
+            humanPlayer.y.value = screenHeight - playerHeight
+        }
     }
 }

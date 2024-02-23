@@ -6,21 +6,16 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -98,43 +93,38 @@ fun GameScreen(
             mutableStateOf(Config(maxWidth, maxHeight, density = density))
         }
 
-        val computerPlayer = remember {
-            Player()
-        }
-        val humanPlayer = remember {
-            Player()
-        }
-
         val game by rememberGame(
-            computerPlayer = computerPlayer,
-            humanPlayer = humanPlayer,
             config = config
         )
 
         val coroutineScope = rememberCoroutineScope()
 
+        LaunchedEffect(game.gameState.value) {
+            when (game.gameState.value) {
+                GameState.UserWon -> onGameFinish(true)
+                GameState.ComputerWon -> onGameFinish(false)
+                else -> {}
+            }
+        }
+
 
         Box(
             modifier = Modifier
-                .offset(computerPlayer.x.value, computerPlayer.y.value)
-                .width(config.playerWidth)
-                .height(config.playerHeight)
+                .playerModifier(game.computerPlayer)
                 .background(Color(0xFF970303))
 
         )
 
         Box(
             modifier = Modifier
-                .offset(humanPlayer.x.value, humanPlayer.y.value)
-                .width(config.playerWidth)
-                .height(config.playerHeight)
+                .playerModifier(game.humanPlayer)
                 .background(Color(0xFF039725))
         )
 
         Box(
             modifier = Modifier
                 .zIndex(2f)
-                .offset(game.ball.x.value, game.ball.y.value)
+                .ballOffset(game.ball)
                 .clip(CircleShape)
                 .size(config.ballSize)
                 .background(Color.Black)
@@ -149,14 +139,7 @@ fun GameScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .draggable(
-                    rememberDraggableState {
-                        with(density) {
-                            humanPlayer.move(it.toDp())
-                        }
-                    },
-                    orientation = Orientation.Horizontal
-                )
+                .playerController(game)
         )
 
     }
