@@ -1,17 +1,26 @@
 package com.yveskalume.jetpong
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 
-fun Modifier.ballOffset(ball: Ball): Modifier {
-    return this.offset(ball.x.value, ball.y.value)
+fun Modifier.ballModifier(game: Game): Modifier {
+    return this
+        .offset(game.ball.x.value, game.ball.y.value)
+        .clip(CircleShape)
+        .size(game.ball.size)
+        .background(Color.Black)
 }
 
 fun Modifier.playerModifier(player: Player): Modifier {

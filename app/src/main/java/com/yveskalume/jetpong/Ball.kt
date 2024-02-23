@@ -14,17 +14,17 @@ class Ball(private val screenDensity: Density) {
     val x = mutableStateOf(0.dp)
     val y = mutableStateOf(0.dp)
 
-    val velocityX = 2f
-    val velocityY = 1f
+    val defaultXVelocity = 2f
+    private val defaultYVeloticty = 1f
 
     var actualXVelocity by mutableFloatStateOf(
         Random.nextInt(
-            -velocityX.toInt(),
-            velocityX.toInt()
+            -defaultXVelocity.toInt(),
+            defaultXVelocity.toInt()
         ).toFloat()
     )
 
-    var actualYVelocity by mutableFloatStateOf(-velocityY)
+    var actualYVelocity by mutableFloatStateOf(-defaultYVeloticty)
 
 
     fun move(delta: Long) {

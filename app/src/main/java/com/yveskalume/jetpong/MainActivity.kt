@@ -97,7 +97,7 @@ fun GameScreen(
             mutableStateOf(Config(maxWidth, maxHeight, density = density))
         }
 
-        val game by rememberGame(
+        val game = rememberGame(
             config = config
         )
 
@@ -107,7 +107,7 @@ fun GameScreen(
             when (game.gameState.value) {
                 GameState.UserWon -> onGameFinish(true)
                 GameState.ComputerWon -> onGameFinish(false)
-                GameState.Inital -> {}
+                GameState.Initial -> {}
                 GameState.Playing -> onRestartGame()
             }
         }
@@ -129,10 +129,7 @@ fun GameScreen(
         Box(
             modifier = Modifier
                 .zIndex(2f)
-                .ballOffset(game.ball)
-                .clip(CircleShape)
-                .size(config.ballSize)
-                .background(Color.Black)
+                .ballModifier(game)
                 .clickable {
                     coroutineScope.launch {
                         game.play()

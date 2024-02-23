@@ -7,16 +7,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.unit.dp
 
-
+/**
+ * Enum representing different states of the game.
+ */
 enum class GameState {
-    Inital, Playing, UserWon, ComputerWon
+    Initial, Playing, UserWon, ComputerWon
 }
 
+/**
+ * Function to remember the game state using Compose.
+ * @param config The configuration for the game.
+ * @return the game.
+ */
 @Composable
-fun rememberGame(config: Config) =
-    remember(config.screenHeight, config.screenWidth) {
-        mutableStateOf(Game(config = config))
-    }
+fun rememberGame(config: Config) = remember(
+    config.screenHeight,
+    config.screenWidth
+) {
+    Game(config = config)
+}
+
+/**
+ * Class representing the game logic.
+ * @property computerPlayer The computer player.
+ * @property humanPlayer The human player.
+ * @property config The configuration for the game.
+ */
 
 class Game(
     val computerPlayer: Player = Player(),
@@ -26,77 +42,68 @@ class Game(
 
     val ball = Ball(config.density)
 
-    val gameState: MutableState<GameState> = mutableStateOf(GameState.Inital)
+    val gameState: MutableState<GameState> = mutableStateOf(GameState.Initial)
 
     init {
-        with(config) {
-            ball.x.value = (screenWidth / 2) - (ballSize / 2)
-            ball.y.value = (screenHeight / 2) - (ballSize / 2)
+        setUpGame()
+    }
 
-            computerPlayer.x.value = (screenWidth / 2) - (playerWidth / 2)
-            computerPlayer.y.value = 0.dp
+    /**
+     * Function to set up the initial game state.
+     * This function initializes the positions of the ball, computer player, and human player.
+     */
+    private fun setUpGame() {
+        with(ball) {
+            x.value = (config.screenWidth / 2) - (size / 2)
+            y.value = (config.screenHeight / 2) - (size / 2)
+        }
+        with(computerPlayer) {
+            x.value = (config.screenWidth / 2) - (width / 2)
+            y.value = 0.dp
+        }
 
-            humanPlayer.x.value = (screenWidth / 2) - (playerWidth / 2)
-            humanPlayer.y.value = screenHeight - playerHeight
+        with(humanPlayer) {
+            x.value = (config.screenWidth / 2) - (width / 2)
+            y.value = config.screenHeight - height
         }
     }
 
 
     suspend fun play() {
         gameState.value = GameState.Playing
-        val computerMachineSpeedAndDirection = ball.velocityX / 2f
+        val computerMachineSpeedAndDirection = ball.defaultXVelocity / 2f
         var lastFrameMillis = withFrameMillis { it }
 
         while (gameState.value == GameState.Playing) {
             withFrameMillis {
-                val deltaTime = it - lastFrameMillis
+                val deltaTime = it - lastFrameMillis // Time elapsed since last frame
 
                 ball.move(deltaTime)
 
                 with(config.density) {
-                    computerPlayer.move(((if (ball.x.value > computerPlayer.x.value + (config.playerWidth / 2)) computerMachineSpeedAndDirection else -computerMachineSpeedAndDirection) * deltaTime).toDp())
+                    with(computerPlayer) {
+                        move(((if (ball.x.value > x.value + (width / 2)) computerMachineSpeedAndDirection else -computerMachineSpeedAndDirection) * deltaTime).toDp())
+                    }
                 }
 
 
-                if (ball.y.value <= computerPlayer.y.value + config.playerHeight
-                    && (ball.x.value + config.ballSize >= computerPlayer.x.value && ball.x.value <= (computerPlayer.x.value + config.playerWidth))
-                    && ball.actualYVelocity < 0
-                ) {
-                    ball.actualYVelocity *= -1
-                    val centerOfThePlayer = computerPlayer.x.value + (config.playerWidth / 2)
-                    val centerOfBall = ball.x.value + (config.ballSize / 2)
-                    val ballCenterPosRelativeToCenterOfThePlayer =
-                        centerOfBall - centerOfThePlayer
-                    val ballHeightOnPaddleRatio =
-                        ballCenterPosRelativeToCenterOfThePlayer / ((config.playerWidth / 2) + config.ballSize)
-                    ball.actualXVelocity = (ballHeightOnPaddleRatio * ball.velocityX).coerceIn(
-                        -ball.velocityX,
-                        ball.velocityX
+                if (isTheBallOnTheComputerPlayerLine() && theBallHaveTouchedThePlayer(computerPlayer)) {
+                    changeBallDirectionOnTouchThePlayer(computerPlayer)
+                } else if (isTheBallOnTheHumanPlayerLine() && theBallHaveTouchedThePlayer(
+                        humanPlayer
                     )
-                } else if (ball.y.value >= config.screenHeight - config.playerHeight - config.ballSize
-                    && (ball.x.value + config.ballSize >= humanPlayer.x.value && ball.x.value <= humanPlayer.x.value + config.playerWidth)
-                    && ball.actualYVelocity > 0
                 ) {
-                    ball.actualYVelocity *= -1
-                    val centerOfThePlayer = humanPlayer.x.value + (config.playerWidth / 2)
-                    val centerOfBall = ball.x.value + (config.ballSize / 2)
-                    val ballCenterPosRelativeToCenterOfThePlayer =
-                        centerOfBall - centerOfThePlayer
-                    val ballHeightOnPaddleRatio =
-                        ballCenterPosRelativeToCenterOfThePlayer / ((config.playerWidth / 2) + config.ballSize)
-                    ball.actualXVelocity = (ballHeightOnPaddleRatio * ball.velocityX).coerceIn(
-                        -ball.velocityX,
-                        ball.velocityX
-                    )
-                } else if (ball.y.value >= config.screenHeight - config.ballSize && ball.actualYVelocity > 0) {
+                    changeBallDirectionOnTouchThePlayer(humanPlayer)
+                } else if (ball.y.value >= config.screenHeight - ball.size && ball.actualYVelocity > 0) {
                     gameState.value = GameState.ComputerWon
-                    resetItemPositions()
+                    setUpGame()
                 } else if (ball.y.value <= 0.dp && ball.actualYVelocity < 0) {
                     gameState.value = GameState.UserWon
-                    resetItemPositions()
+                    setUpGame()
                 }
 
-                if (ball.x.value >= config.screenWidth - config.ballSize && ball.actualXVelocity > 0 || ball.x.value <= 0.dp && ball.actualXVelocity < 0) {
+                // Check for wall collisions and bounce the ball
+                if (ball.x.value >= config.screenWidth - ball.size && ball.actualXVelocity > 0 || ball.x.value <= 0.dp && ball.actualXVelocity < 0) {
                     ball.actualXVelocity *= -1f
                 }
 
@@ -105,16 +112,38 @@ class Game(
         }
     }
 
-    private fun resetItemPositions() {
-        with(config) {
-            ball.x.value = (screenWidth / 2) - (ballSize / 2)
-            ball.y.value = (screenHeight / 2) - (ballSize / 2)
+    private fun isTheBallOnTheComputerPlayerLine(): Boolean {
+        return ball.y.value <= computerPlayer.y.value + computerPlayer.height && ball.actualYVelocity < 0
+    }
 
-            computerPlayer.x.value = (screenWidth / 2) - (playerWidth / 2)
-            computerPlayer.y.value = 0.dp
+    private fun isTheBallOnTheHumanPlayerLine(): Boolean {
+        return ball.y.value >= config.screenHeight - humanPlayer.height - ball.size && ball.actualYVelocity > 0
+    }
 
-            humanPlayer.x.value = (screenWidth / 2) - (playerWidth / 2)
-            humanPlayer.y.value = screenHeight - playerHeight
-        }
+    /**
+     * Function to change ball direction upon collision with a player.
+     * @param player The player object with which the ball collides.
+     */
+    private fun changeBallDirectionOnTouchThePlayer(player: Player) {
+        ball.actualYVelocity *= -1
+        val centerOfThePlayer = player.x.value + (player.width / 2)
+        val centerOfBall = ball.x.value + (ball.size / 2)
+        val ballCenterRelativeToPlayerCenter =
+            centerOfBall - centerOfThePlayer
+        val ballHeightOnPaddleRatio =
+            ballCenterRelativeToPlayerCenter / ((player.width / 2) + ball.size)
+        ball.actualXVelocity = (ballHeightOnPaddleRatio * ball.defaultXVelocity).coerceIn(
+            -ball.defaultXVelocity,
+            ball.defaultXVelocity
+        )
+    }
+
+    /**
+     * Function to check if the ball has touched a player.
+     * @param player The player object to check for collision with the ball.
+     * @return True if the ball has touched the player, false otherwise.
+     */
+    private fun theBallHaveTouchedThePlayer(player: Player): Boolean {
+        return (ball.x.value + ball.size >= player.x.value && ball.x.value <= player.x.value + player.width)
     }
 }
