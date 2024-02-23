@@ -68,6 +68,9 @@ class MainActivity : ComponentActivity() {
                             onGameFinish = { userWon ->
                                 userHaveWon = userWon
                                 isGameFinished = true
+                            },
+                            onRestartGame = {
+                                isGameFinished = false
                             }
                         )
                     }
@@ -80,6 +83,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun GameScreen(
     onGameFinish: (Boolean) -> Unit,
+    onRestartGame: () -> Unit
 ) {
 
     BoxWithConstraints(
@@ -103,7 +107,8 @@ fun GameScreen(
             when (game.gameState.value) {
                 GameState.UserWon -> onGameFinish(true)
                 GameState.ComputerWon -> onGameFinish(false)
-                else -> {}
+                GameState.Inital -> {}
+                GameState.Playing -> onRestartGame()
             }
         }
 
@@ -149,6 +154,9 @@ fun GameScreen(
 @Composable
 fun GreetingPreview() {
     JetPongTheme {
-        GameScreen(onGameFinish = {})
+        GameScreen(
+            onGameFinish = {},
+            onRestartGame = {}
+        )
     }
 }
